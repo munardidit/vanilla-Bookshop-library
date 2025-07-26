@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>B4P</title>
+  <link rel="stylesheet" href="Styles.css" />
+  
+</head>
+<body class="light-mode">
+  <nav class="navbar">
+    <div class="container">
+      <h1 class="logo">Bookies For Pookies</h1>
+      <ul class="nav-links">
+        <li><a href="#">Home</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#contact">Contact</a></li>
+        <li><button id="darkToggle">🌙</button></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div class="search-bar">
+      <input
+        type="text"
+        id="searchInput"
+        placeholder="Search for books..."
+      />
+      <button onclick="searchBooks()">Search</button>
+    </div>
+
+    <p id="error" class="error"></p>
+    <p id="loading" class="loading"></p>
+
+    <div id="results" class="book-grid"></div>
+    <div class="pagination">
+      <button id="prevPage">Prev</button>
+      <span id="pageNum">1</span>
+      <button id="nextPage">Next</button>
+    </div>
+  </main>
+
+  <script>
+    let currentPage = 1;
+    let currentQuery = '';
+    const maxResults = 9;
+
+    document.getElementById('darkToggle').onclick = () => {
+      document.body.classList.toggle('dark-mode');
+      document.body.classList.toggle('light-mode');
+    };
+
+    document.getElementById('prevPage').onclick = () => {
+      if (currentPage > 1) {
+        currentPage--;
+        searchBooks(currentQuery);
+      }
+    };
+
+    document.getElementById('nextPage').onclick = () => {
+      currentPage++;
+      searchBooks(currentQuery);
+    };
+
+    async function searchBooks(queryParam) {
+      const query = queryParam || document.getElementById('searchInput').value.trim();
+      currentQuery = query;
+      const resultsDiv = document.getElementById('results');
+      const errorEl = document.getElementById('error');
+      const loadingEl = document.getElementById('loading');
+      const pageDisplay = document.getElementById('pageNum');
+
+      resultsDiv.innerHTML = '';
+      errorEl.textContent = '';
+      loadingEl.textContent = '';
+      pageDisplay.textContent = currentPage;
+
+      if (!query) {
+        errorEl.textContent = 'Please enter a search term.';
+        return;
+      }
+
+      loadingEl.textContent = 'Just a minute...';
+
+      try {
+        const startIndex = (currentPage - 1) * maxResults;
+        const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&startIndex=${startIndex}&maxResults=${maxResults}`);
+        const data = await res.json();
+
+        if (!data.items || data.items.length === 0) {
+          errorEl.textContent = 'No results found.';
+          return;
+        }
+
+        resultsDiv.innerHTML = data.items.map(book => {
+          const info = book.volumeInfo;
+          return `
+            <div class="book-card">
+              <img src="${info.imageLinks?.thumbnail || 'https://via.placeholder.com/128x192?text=No+Image'}" alt="${info.title}" />
+              <h2>${info.title}</h2>
+              <p class="author">by ${info.authors?.join(', ') || 'Unknown author'}</p>
+              <p class="description">${info.description || 'No description available.'}</p>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        errorEl.textContent = 'Something went wrong.';
+      } finally {
+        loadingEl.textContent = '';
+      }
+    }
+  </script>
+</body>
+</html>
